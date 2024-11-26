@@ -4,9 +4,14 @@ import (
 	"crypto/x509"
 	"fmt"
 	"github.com/O-tero/pkg/config"
-	"github.com/O-tero/pkg/notify"
 	"time"
+	"github.com/O-tero/pkg/notify"
 )
+
+type StoredCertificate struct {
+	Domain string
+	Cert   []byte
+}
 
 const expirationThreshold = 7 * 24 * time.Hour // Notify 7 days before expiry
 
@@ -19,13 +24,22 @@ func GetCertificateExpiry(cert []byte) (time.Time, error) {
 }
 
 
+
 func CheckAndNotifyExpiringCertificates() {
-	certificates := ListCertificates() // Fetch list of certificates from storage or config
+	certificates, err := ListCertificates() // Fetch list of certificates from storage or config
+	if err != nil {
+		fmt.Printf("Failed to list certificates: %v\n", err)
+		return
+	}
 
 	emailConfig := config.LoadEmailConfig() // Load email settings from configuration
 
 	for _, cert := range certificates {
-		expiryDate := GetCertificateExpiry(cert) // Assume this retrieves the certificate's expiration date
+		expiryDate, err := GetCertificateExpiry(cert.Cert) // Assume this retrieves the certificate's expiration date
+		if err != nil {
+			fmt.Printf("Failed to parse certificate for %s: %v\n", cert.Domain, err)
+			continue
+		}
 		timeLeft := time.Until(expiryDate)
 
 		if timeLeft > 0 && timeLeft <= expirationThreshold {

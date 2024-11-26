@@ -15,14 +15,20 @@ type EmailConfig struct {
 	RecipientEmails []string
 }
 
-func LoadEmailConfig() EmailConfig {
-	return EmailConfig{
+func LoadEmailConfig() (EmailConfig, error) {
+	config := EmailConfig{
 		SMTPServer:      os.Getenv("SMTP_SERVER"),
 		SMTPPort:        os.Getenv("SMTP_PORT"),
 		SenderEmail:     os.Getenv("SMTP_SENDER"),
 		Password:        os.Getenv("SMTP_PASSWORD"),
 		RecipientEmails: strings.Split(os.Getenv("SMTP_RECIPIENTS"), ","),
 	}
+
+	if config.SMTPServer == "" || config.SenderEmail == "" || config.Password == "" {
+		return EmailConfig{}, fmt.Errorf("incomplete email configuration")
+	}
+
+	return config, nil
 }
 
 func SendEmail(config EmailConfig, subject, body string) error {

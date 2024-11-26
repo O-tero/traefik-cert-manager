@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"github.com/O-tero/pkg/api"
-	"path/filepath"
 )
 
 // Define the storage path for certificates and keys
