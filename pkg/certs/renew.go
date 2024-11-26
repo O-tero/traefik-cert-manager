@@ -1,13 +1,40 @@
 package certs
 
 import (
+	"errors"
 	"fmt"
+	"io/ioutil"
 	"github.com/O-tero/pkg/api"
+	"path/filepath"
 )
+
+// Define the storage path for certificates and keys
+const CertsStoragePath = "/path/to/certificates"
+
+// GetCertificate retrieves the certificate and private key for a given domain from secure storage.
+func GetCertificate(domain string) (string, string, error) {
+	// Define file paths for certificate and key
+	certPath := filepath.Join(CertsStoragePath, fmt.Sprintf("%s.crt", domain))
+	keyPath := filepath.Join(CertsStoragePath, fmt.Sprintf("%s.key", domain))
+
+	// Read the certificate file
+	certData, err := ioutil.ReadFile(certPath)
+	if err != nil {
+		return "", "", errors.New(fmt.Sprintf("failed to read certificate for domain %s: %v", domain, err))
+	}
+
+	// Read the private key file
+	keyData, err := ioutil.ReadFile(keyPath)
+	if err != nil {
+		return "", "", errors.New(fmt.Sprintf("failed to read private key for domain %s: %v", domain, err))
+	}
+
+	return string(certData), string(keyData), nil
+}
 
 func RenewAndApplyCertificates(domains []string) {
 	for _, domain := range domains {
-		if IsCertificateExpiring(domain) {
+		if IsCertificateExpiring(CertificateStatus{Domain: domain}) {
 			// Request a new certificate
 			err := RequestCertificate(domain)
 			if err != nil {
@@ -15,8 +42,14 @@ func RenewAndApplyCertificates(domains []string) {
 				continue
 			}
 
-			// Fetch the new certificate and key
-			cert, key := GetCertificate(domain) // Assume this retrieves cert/key for the domain
+			// Fetch the new certificate and key from secure storage
+			cert, key, err := GetCertificate(domain)
+			if err != nil {
+				fmt.Printf("Failed to retrieve certificate for %s: %v\n", domain, err)
+				continue
+			}
+
+			// Store and use the certificate
 			err = StoreCertificate(domain, cert, key)
 			if err != nil {
 				fmt.Printf("Failed to store certificate for %s: %v\n", domain, err)
