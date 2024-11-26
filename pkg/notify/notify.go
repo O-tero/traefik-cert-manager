@@ -5,7 +5,7 @@ import (
     "fmt"
     "log"
     "net/smtp"
-    "github.com/O-tero/pkg"
+    "github.com/O-tero/pkg/certs"
 )
 
 func SendEmailNotification(email, subject, body string) error {

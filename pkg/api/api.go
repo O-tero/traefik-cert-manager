@@ -3,11 +3,11 @@ package api
 import (
 	"bytes"
 	"crypto/tls"
+	"encoding/json"
 	"fmt"
-	"json"
 	"net/http"
 	"os"
-	
+	"time"
 )
 
 type Certificate struct {
@@ -17,6 +17,27 @@ type Certificate struct {
 	} `json:"domains"`
 	Certificate string `json:"certificate"`
 	Key         string `json:"key"`
+}
+
+// NotifyExpirationsHandler handles certificate expiration notifications
+func NotifyExpirationsHandler(w http.ResponseWriter, r *http.Request) {
+	var cert Certificate
+	if err := json.NewDecoder(r.Body).Decode(&cert); err != nil {
+		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+		return
+	}
+
+	expirationDate := time.Now().AddDate(0, 0, 30) // Example expiration date
+	response := map[string]interface{}{
+		"domain":         cert.Domains.Main,
+		"expirationDate": expirationDate,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
 }
 
 func UpdateTraefikCertificates(certPath, keyPath string) error {
