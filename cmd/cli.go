@@ -3,14 +3,13 @@ package main
 import (
 	"fmt"
 	"log"
-	"os"
-	"pkg/certs"
-	"pkg/notify"
+	"github.com/O-tero/pkg/certs"
+	"github.com/O-tero/pkg/notify"
 
 	"github.com/spf13/cobra"
 )
 
-func main() {
+func cliMain() {
 	// Root command
 	var rootCmd = &cobra.Command{
 		Use:   "cert-manager",

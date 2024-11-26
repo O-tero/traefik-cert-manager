@@ -6,7 +6,7 @@ import (
 	"html/template"
 	"log"
 	"net/http"
-	"pkg/certs"
+	"github.com/O-tero/pkg/certs"
 )
 
 // CertificateData holds data for the web interface

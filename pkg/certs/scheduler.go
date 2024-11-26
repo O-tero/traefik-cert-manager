@@ -3,7 +3,7 @@ package certs
 import (
 	"fmt"
 	"time"
-	"certs"
+	"github.com/O-tero/certs"
 )
 
 func CheckAndRenewCertificates() {
@@ -35,3 +35,4 @@ func StartScheduler(interval time.Duration) {
 		CheckAndRenewCertificates()
 	}
 }
+

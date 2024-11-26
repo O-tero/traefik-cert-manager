@@ -2,8 +2,10 @@
 package notify
 
 import (
+    "fmt"
     "log"
     "net/smtp"
+    "github.com/O-tero/pkg"
 )
 
 func SendEmailNotification(email, subject, body string) error {
@@ -24,4 +26,19 @@ func SendEmailNotification(email, subject, body string) error {
 
     log.Println("Email notification sent successfully")
     return nil
+}
+
+// SendExpirationNotifications sends notifications for certificates nearing expiration
+func SendExpirationNotifications() error {
+	certStatuses := certs.CheckCertificatesStatus()
+
+	for _, cert := range certStatuses {
+		if cert.Status == "Expiring Soon" { // Example condition
+			// Replace with actual notification logic (email, SMS, etc.)
+			log.Printf("Sending notification for domain %s expiring on %s\n", cert.Domain, cert.Expiry)
+		}
+	}
+
+	fmt.Println("Notifications sent for all expiring certificates.")
+	return nil
 }
