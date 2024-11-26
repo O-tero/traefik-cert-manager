@@ -3,7 +3,7 @@ package api
 import (
 	"encoding/json"
 	"net/http"
-	"pkg/config"
+	"github.com/O-tero/pkg/config"
 )
 
 func UpdateDomainConfigsHandler(w http.ResponseWriter, r *http.Request) {

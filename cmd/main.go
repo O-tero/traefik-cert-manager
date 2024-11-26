@@ -3,8 +3,8 @@ package main
 import (
 	"log"
 	"net/http"
-	"pkg/api"
-	"pkg/certs"
+	"github.com/O-tero/pkg/api"
+	"github.com/O-tero/pkg/certs"
 	"time"
 )
 

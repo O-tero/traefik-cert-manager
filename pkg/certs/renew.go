@@ -1,7 +1,8 @@
 package certs
 
 import (
-	"pkg/api"
+	"fmt"
+	"github.com/O-tero/pkg/api"
 )
 
 func RenewAndApplyCertificates(domains []string) {

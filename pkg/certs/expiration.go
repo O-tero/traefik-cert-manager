@@ -1,10 +1,11 @@
 package certs
 
 import (
+	"crypto/x509"
 	"fmt"
+	"github.com/O-tero/pkg/config"
+	"github.com/O-tero/pkg/notify"
 	"time"
-	"pkg/config"
-	"pkg/notify"
 )
 
 const expirationThreshold = 7 * 24 * time.Hour // Notify 7 days before expiry

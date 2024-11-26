@@ -30,7 +30,6 @@ func SendEmail(config EmailConfig, subject, body string) error {
 	auth := smtp.PlainAuth("", config.SenderEmail, config.Password, config.SMTPServer)
 
 	// Build the email
-	to := strings.Join(config.RecipientEmails, ",")
 	msg := []byte(fmt.Sprintf("Subject: %s\r\n\r\n%s", subject, body))
 
 	// Send the email

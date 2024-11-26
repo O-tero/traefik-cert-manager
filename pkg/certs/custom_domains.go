@@ -2,7 +2,7 @@ package certs
 
 import (
 	"fmt"
-	"pkg/config"
+	"github.com/O-tero/pkg/config"
 )
 
 func RequestCertificatesForCustomDomains() {
