@@ -1,15 +1,29 @@
 package certs
 
 import (
-	"os"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
-	"encoding/hex"
+	"fmt"
 	"io"
+	"log"
+	"os"
 	"path/filepath"
 
 )
+
+
+type Certificate struct {
+	Certificate string `json:"certificate"`
+	Key         string `json:"key"`
+}
+
+type CertificatesFile struct {
+	TLS []struct {
+		CertFile string `json:"certFile"`
+		KeyFile  string `json:"keyFile"`
+	} `json:"tls"`
+}
 
 
 func EncryptData(data []byte, key string) ([]byte, error) {
@@ -32,6 +46,31 @@ func EncryptData(data []byte, key string) ([]byte, error) {
 
 func DecryptData(ciphertext []byte, key string) ([]byte, error) {
 	// Decrypt logic...
+}
+
+
+func WriteCertificatesToFile(certPath, keyPath, outputFile string) error {
+	certs := CertificatesFile{
+		TLS: []struct {
+			CertFile string `json:"certFile"`
+			KeyFile  string `json:"keyFile"`
+		}{
+			{CertFile: certPath, KeyFile: keyPath},
+		},
+	}
+
+	file, err := os.Create(outputFile)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	encoder := json.NewEncoder(file)
+	if err := encoder.Encode(certs); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 
