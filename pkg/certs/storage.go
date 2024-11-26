@@ -54,3 +54,22 @@ func StoreCertificate(cert *lego.CertificateResource, domain string) error {
 	return nil
 }
 
+func SaveCertificate(domain string, cert []byte, key []byte) error {
+    certPath := "certificates/" + domain + ".crt"
+    keyPath := "certificates/" + domain + ".key"
+
+    // Save certificate
+    err := os.WriteFile(certPath, cert, 0600)
+    if err != nil {
+        return err
+    }
+
+    // Save private key
+    err = os.WriteFile(keyPath, key, 0600)
+    if err != nil {
+        return err
+    }
+
+    log.Println("Certificate and key stored for domain:", domain)
+    return nil
+}

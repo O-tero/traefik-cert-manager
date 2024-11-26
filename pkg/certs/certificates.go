@@ -45,11 +45,6 @@ func CheckAndRenewCertificates() {
     // Logic to check and renew certificates
 }
 
-func StoreCertificate(certData []byte, domain string) error {
-    log.Printf("Storing certificate for domain: %s", domain)
-    // Save encrypted certificate data to disk
-    return nil
-}
 
 func StartCertificateManager(cfg Config) {
     // Scheduler for periodic renewal checks
@@ -60,3 +55,4 @@ func StartCertificateManager(cfg Config) {
         }
     }()
 }
+

@@ -9,6 +9,15 @@ import (
 
 const expirationThreshold = 7 * 24 * time.Hour // Notify 7 days before expiry
 
+func GetCertificateExpiry(cert []byte) (time.Time, error) {
+    parsedCert, err := x509.ParseCertificate(cert)
+    if err != nil {
+        return time.Time{}, err
+    }
+    return parsedCert.NotAfter, nil
+}
+
+
 func CheckAndNotifyExpiringCertificates() {
 	certificates := ListCertificates() // Fetch list of certificates from storage or config
 
