@@ -37,10 +37,13 @@ func cliMain() {
 		Use:   "check-certificates",
 		Short: "Check the status of all certificates",
 		Run: func(cmd *cobra.Command, args []string) {
-			status := certs.CheckCertificatesStatus()
+			status, err := certs.CheckCertificatesStatus()
+			if err != nil {
+				log.Fatalf("Failed to check certificate statuses: %v", err)
+			}
 			fmt.Println("Certificate Status:")
 			for _, s := range status {
-				fmt.Printf("Domain: %s | Expiry: %s | Status: %s\n", s.Domain, s.Expiry, s.Status)
+				fmt.Printf("Domain: %s | Expiry: %s | Status: %s\n", s.Domain, s.Expiry.Format("2006-01-02"), s.Status)
 			}
 		},
 	}
