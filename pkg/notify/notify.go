@@ -26,3 +26,4 @@ func SendEmailNotification(email, subject, body string) error {
 	log.Println("Email notification sent successfully")
 	return nil
 }
+

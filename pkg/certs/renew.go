@@ -1,7 +1,6 @@
 package certs
 
 import (
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"github.com/O-tero/pkg/api"
@@ -21,13 +20,13 @@ func GetCertificate(domain string) (string, string, error) {
 	// Read the certificate file
 	certData, err := ioutil.ReadFile(certPath)
 	if err != nil {
-		return "", "", errors.New(fmt.Sprintf("failed to read certificate for domain %s: %v", domain, err))
+		return "", "", fmt.Errorf("failed to read certificate for domain %s: %v", domain, err)
 	}
 
 	// Read the private key file
 	keyData, err := ioutil.ReadFile(keyPath)
 	if err != nil {
-		return "", "", errors.New(fmt.Sprintf("failed to read private key for domain %s: %v", domain, err))
+		return "", "", fmt.Errorf("failed to read private key for domain %s: %v", domain, err)
 	}
 
 	return string(certData), string(keyData), nil

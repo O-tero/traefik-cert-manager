@@ -6,11 +6,12 @@ import (
 	"time"
 	
 	"github.com/O-tero/pkg/certs"
-	"github.com/O-tero/pkg/notify"
+	"github.com/O-tero/pkg/services"
 
 	"github.com/spf13/cobra"
 	
 )
+
 
 func cliMain() {
 	// Root command
@@ -60,13 +61,14 @@ func cliMain() {
 		Use:   "send-notifications",
 		Short: "Send notifications for expiring certificates",
 		Run: func(cmd *cobra.Command, args []string) {
-			err := notify.SendExpirationNotifications()
+			err := services.SendExpirationNotifications()
 			if err != nil {
 				log.Fatalf("Failed to send notifications: %v", err)
 			}
 			fmt.Println("Notifications sent for expiring certificates.")
 		},
 	}
+	
 
 	// Add commands to root
 	rootCmd.AddCommand(requestCmd, checkCmd, notifyCmd)
