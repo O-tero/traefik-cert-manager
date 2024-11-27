@@ -2,8 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
-	"time"
 	
 	"github.com/O-tero/pkg/certs"
 	"github.com/O-tero/pkg/services"
@@ -13,7 +11,7 @@ import (
 )
 
 
-func cliMain() {
+func cliMain() error {
 	// Root command
 	var rootCmd = &cobra.Command{
 		Use:   "cert-manager",
@@ -26,13 +24,14 @@ func cliMain() {
 		Use:   "request-certificate [domain]",
 		Short: "Request a new SSL/TLS certificate for a domain",
 		Args:  cobra.ExactArgs(1),
-		Run: func(cmd *cobra.Command, args []string) {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			domain := args[0]
 			err := certs.RequestCertificate(domain)
 			if err != nil {
-				log.Fatalf("Failed to request certificate for domain %s: %v", domain, err)
+				return fmt.Errorf("failed to request certificate for domain %s: %w", domain, err)
 			}
 			fmt.Printf("Certificate successfully requested for domain: %s\n", domain)
+			return nil
 		},
 	}
 
@@ -40,19 +39,16 @@ func cliMain() {
 	var checkCmd = &cobra.Command{
 		Use:   "check-certificates",
 		Short: "Check the status of all certificates",
-		Run: func(cmd *cobra.Command, args []string) {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			status, err := certs.CheckCertificatesStatus()
 			if err != nil {
-				log.Fatalf("Failed to check certificate statuses: %v", err)
+				return fmt.Errorf("failed to check certificate statuses: %w", err)
 			}
 			fmt.Println("Certificate Status:")
 			for _, s := range status {
-				expiryTime, err := time.Parse("2006-01-02", s.Expiry)
-				if err != nil {
-					log.Fatalf("Failed to parse expiry date for domain %s: %v", s.Domain, err)
-				}
-				fmt.Printf("Domain: %s | Expiry: %s | Status: %s\n", s.Domain, expiryTime.Format("2006-01-02"), s.Status)
+				fmt.Printf("Domain: %s | Expiry: %s | Status: %s\n", s.Domain, s.Expiry, s.Status)
 			}
+			return nil
 		},
 	}
 
@@ -60,21 +56,19 @@ func cliMain() {
 	var notifyCmd = &cobra.Command{
 		Use:   "send-notifications",
 		Short: "Send notifications for expiring certificates",
-		Run: func(cmd *cobra.Command, args []string) {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			err := services.SendExpirationNotifications()
 			if err != nil {
-				log.Fatalf("Failed to send notifications: %v", err)
+				return fmt.Errorf("failed to send notifications: %w", err)
 			}
 			fmt.Println("Notifications sent for expiring certificates.")
+			return nil
 		},
 	}
-	
 
 	// Add commands to root
 	rootCmd.AddCommand(requestCmd, checkCmd, notifyCmd)
 
 	// Execute the CLI
-	if err := rootCmd.Execute(); err != nil {
-		log.Fatalf("CLI error: %v", err)
-	}
+	return rootCmd.Execute()
 }
