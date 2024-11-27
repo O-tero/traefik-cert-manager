@@ -3,10 +3,13 @@ package main
 import (
 	"fmt"
 	"log"
+	"time"
+	
 	"github.com/O-tero/pkg/certs"
 	"github.com/O-tero/pkg/notify"
 
 	"github.com/spf13/cobra"
+	
 )
 
 func cliMain() {
@@ -43,7 +46,11 @@ func cliMain() {
 			}
 			fmt.Println("Certificate Status:")
 			for _, s := range status {
-				fmt.Printf("Domain: %s | Expiry: %s | Status: %s\n", s.Domain, s.Expiry.Format("2006-01-02"), s.Status)
+				expiryTime, err := time.Parse("2006-01-02", s.Expiry)
+				if err != nil {
+					log.Fatalf("Failed to parse expiry date for domain %s: %v", s.Domain, err)
+				}
+				fmt.Printf("Domain: %s | Expiry: %s | Status: %s\n", s.Domain, expiryTime.Format("2006-01-02"), s.Status)
 			}
 		},
 	}

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"github.com/O-tero/pkg/api"
+	"github.com/go-acme/lego/v4/certificate"
+	"path/filepath"
 )
 
 // Define the storage path for certificates and keys
@@ -48,8 +50,17 @@ func RenewAndApplyCertificates(domains []string) {
 				continue
 			}
 
+			// Create a certificate.Resource
+			certResource := &certificate.Resource{
+				Domain:       domain,
+				Certificate:  []byte(cert),
+				PrivateKey:   []byte(key),
+				CertificateURL: "",
+				IssuerCertificate: nil, // Set issuer certificate if available
+			}
+
 			// Store and use the certificate
-			err = StoreCertificate(domain, cert, key)
+			err = StoreCertificate(certResource, domain)
 			if err != nil {
 				fmt.Printf("Failed to store certificate for %s: %v\n", domain, err)
 				continue
