@@ -29,7 +29,11 @@ func StartServer() {
 }
 
 func dashboardHandler(w http.ResponseWriter, r *http.Request) {
-	status := certs.CheckCertificatesStatus()
+	status, err := certs.CheckCertificatesStatus()
+	if err != nil {
+		http.Error(w, "Failed to check certificate status", http.StatusInternalServerError)
+		return
+	}
 	data := []CertificateData{}
 	for _, s := range status {
 		data = append(data, CertificateData{Domain: s.Domain, Expiry: s.Expiry, Status: s.Status})

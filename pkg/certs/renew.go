@@ -55,7 +55,6 @@ func RenewAndApplyCertificates(domains []string) {
 				Domain:       domain,
 				Certificate:  []byte(cert),
 				PrivateKey:   []byte(key),
-				CertificateURL: "",
 				IssuerCertificate: nil, // Set issuer certificate if available
 			}
 

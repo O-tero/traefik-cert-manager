@@ -3,44 +3,21 @@ package notify
 import (
 	"fmt"
 	"net/smtp"
-	"os"
-	"strings"
+
+	"github.com/O-tero/pkg/config"
 )
 
-type EmailConfig struct {
-	SMTPServer   string
-	SMTPPort     string
-	SenderEmail  string
-	Password     string
-	RecipientEmails []string
-}
-
-func LoadEmailConfig() (EmailConfig, error) {
-	config := EmailConfig{
-		SMTPServer:      os.Getenv("SMTP_SERVER"),
-		SMTPPort:        os.Getenv("SMTP_PORT"),
-		SenderEmail:     os.Getenv("SMTP_SENDER"),
-		Password:        os.Getenv("SMTP_PASSWORD"),
-		RecipientEmails: strings.Split(os.Getenv("SMTP_RECIPIENTS"), ","),
-	}
-
-	if config.SMTPServer == "" || config.SenderEmail == "" || config.Password == "" {
-		return EmailConfig{}, fmt.Errorf("incomplete email configuration")
-	}
-
-	return config, nil
-}
-
-func SendEmail(config EmailConfig, subject, body string) error {
+// SendEmail sends an email notification using the provided email configuration.
+func SendEmail(emailConfig config.EmailConfig, subject, body string) error {
 	// Set up authentication
-	auth := smtp.PlainAuth("", config.SenderEmail, config.Password, config.SMTPServer)
+	auth := smtp.PlainAuth("", emailConfig.SenderEmail, emailConfig.Password, emailConfig.SMTPServer)
 
 	// Build the email
 	msg := []byte(fmt.Sprintf("Subject: %s\r\n\r\n%s", subject, body))
 
 	// Send the email
-	addr := fmt.Sprintf("%s:%s", config.SMTPServer, config.SMTPPort)
-	err := smtp.SendMail(addr, auth, config.SenderEmail, config.RecipientEmails, msg)
+	addr := fmt.Sprintf("%s:%s", emailConfig.SMTPServer, emailConfig.SMTPPort)
+	err := smtp.SendMail(addr, auth, emailConfig.SenderEmail, emailConfig.RecipientEmails, msg)
 	if err != nil {
 		return fmt.Errorf("failed to send email: %v", err)
 	}
