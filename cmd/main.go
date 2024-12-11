@@ -16,15 +16,15 @@ func main() {
 	if len(os.Args) > 1 && os.Args[1] == "web" {
 		startWebInterface()
 	} else if len(os.Args) > 1 && os.Args[1] == "cli" {
-		startCLI()
+		if err := cliMain(); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
 	} else {
 		startDefaultMode()
 	}
-	if err := cliMain(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
-	}
 }
+
 
 // Default mode: Starts periodic tasks and API server
 func startDefaultMode() {
@@ -47,8 +47,8 @@ func startWebInterface() {
 // CLI mode
 func startCLI() {
 	log.Println("Starting CLI...")
-	os.Args = os.Args[1:] // Remove "cli" from args for CLI processing
-	mainCLI()             // Placeholder function for CLI logic
+	os.Args = os.Args[1:] 
+	mainCLI()             
 }
 
 // Schedules periodic certificate renewal checks
@@ -85,6 +85,5 @@ func startAPIServer() {
 
 // Placeholder function for CLI logic
 func mainCLI() {
-	// Implement CLI logic here (e.g., using Cobra as previously outlined)
 	log.Println("CLI logic not implemented in this main.go file.")
 }

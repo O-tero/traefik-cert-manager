@@ -2,14 +2,10 @@ package main
 
 import (
 	"fmt"
-	
 	"github.com/O-tero/pkg/certs"
 	"github.com/O-tero/pkg/services"
-
 	"github.com/spf13/cobra"
-	
 )
-
 
 func cliMain() error {
 	// Root command
