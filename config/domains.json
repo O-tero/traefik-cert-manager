@@ -1,10 +1,12 @@
 [
     {
-        "service_name": "example-service",
-        "domain": "example.com"
+        "domain": "example.com",
+        "privateKeyPath": "keys/example.com.key",
+        "email": "admin@example.com"
     },
     {
-        "service_name": "expired-service",
-        "domain": "expired.com"
+        "domain": "expired.com",
+        "privateKeyPath": "keys/expired.com.key",
+        "email": "admin@expired.com"
     }
 ]
