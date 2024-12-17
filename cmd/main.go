@@ -10,11 +10,12 @@ import (
 	"github.com/O-tero/pkg/api"
 	"github.com/O-tero/pkg/certs"
 	"github.com/O-tero/pkg/services"
+	"github.com/O-tero/pkg/config"
 	"github.com/O-tero/web"
 	"github.com/spf13/cobra"
 )
 
-var domainConfigFile = "./config/domains.json" 
+var domainConfigFile = "./config/domains.json"
 
 func main() {
 	if len(os.Args) > 1 && os.Args[1] == "web" {
@@ -30,10 +31,25 @@ func main() {
 	}
 }
 
-// Default mode: Starts periodic tasks and API server
+// Default mode: Starts periodic tasks, loads domain configs, and handles renewals
 func startDefaultMode() {
 	log.Println("Starting Certificate Manager in default mode...")
 
+	// Load domain configurations
+	domainConfigs, err := config.LoadDomainConfigs()
+	if err != nil {
+		log.Fatalf("Error loading domain configurations: %v", err)
+	}
+
+	// Renew certificates for loaded domains
+	for _, domainConfig := range domainConfigs {
+		fmt.Printf("Renewing certificate for domain: %s\n", domainConfig.Domain)
+		if err := certs.RenewCertificate(domainConfig); err != nil {
+			log.Printf("Failed to renew certificate for %s: %v", domainConfig.Domain, err)
+		}
+	}
+
+	// Start periodic tasks
 	go scheduleCertificateRenewal()
 	go scheduleCustomDomainCheck()
 	startAPIServer()
@@ -47,13 +63,14 @@ func startWebInterface() {
 	web.StartServer()
 }
 
+// CLI mode
 func cliMain() error {
 	log.Println("Starting CLI...")
 
 	var rootCmd = &cobra.Command{
 		Use:   "cert-manager",
 		Short: "Certificate Manager CLI",
-		Long:  `A CLI tool for managing SSL/TLS certificates using Traefik.`,
+		Long:  `A CLI tool for managing SSL/TLS certificates.`,
 	}
 
 	// Command to request a certificate for a specific domain
@@ -107,7 +124,7 @@ func cliMain() error {
 	return rootCmd.Execute()
 }
 
-// Schedules periodic certificate renewal checks
+// Periodic certificate renewal checks
 func scheduleCertificateRenewal() {
 	for {
 		log.Println("Running periodic certificate renewal check...")
@@ -116,7 +133,7 @@ func scheduleCertificateRenewal() {
 	}
 }
 
-// Schedules periodic custom domain checks and certificate requests
+// Periodic custom domain checks and certificate requests
 func scheduleCustomDomainCheck() {
 	for {
 		log.Println("Checking for certificates for custom domains...")
@@ -125,7 +142,7 @@ func scheduleCustomDomainCheck() {
 	}
 }
 
-// Starts the API server
+// API server for domain configuration and notifications
 func startAPIServer() {
 	go func() {
 		http.HandleFunc("/update-domains", api.UpdateDomainConfigsHandler)

@@ -3,6 +3,7 @@ package certs
 import (
 	"fmt"
 	"os"
+	"github.com/O-tero/pkg/config"
 )
 
 // LoadPrivateKey reads the private key from the specified path.
@@ -14,28 +15,16 @@ func LoadPrivateKey(path string) ([]byte, error) {
 	return key, nil
 }
 
-// RequestCertificateWithKey uses the private key to request a certificate.
-func RequestCertificateWithKey(domain string, privateKeyPath string) error {
-	// Load the private key
-	privateKey, err := LoadPrivateKey(privateKeyPath)
+func RenewCertificate(domainConfig config.DomainConfig) error {
+	// Load the private key for the domain
+	privateKey, err := LoadPrivateKey(domainConfig.PrivateKeyPath)
 	if err != nil {
-		return fmt.Errorf("unable to load private key: %w", err)
+		return fmt.Errorf("failed to load private key for %s: %w", domainConfig.Domain, err)
 	}
 
-	// Placeholder for ACME client logic
-	fmt.Printf("Requesting certificate for domain: %s using key: %s\n", domain, privateKeyPath)
+	// Simulate certificate request logic
+	fmt.Printf("Renewing certificate for domain: %s with private key (%d bytes)\n", domainConfig.Domain, len(privateKey))
 
-	// Use the privateKey in actual certificate request logic (pseudo-code)
-	// Example placeholder to "use" the private key
-	if len(privateKey) == 0 {
-		return fmt.Errorf("private key is empty for domain %s", domain)
-	}
-
-	// Simulate ACME client behavior
-	fmt.Printf("Successfully loaded private key for domain: %s (key length: %d bytes)\n", domain, len(privateKey))
-
-	// Placeholder: Pass privateKey to an ACME library to generate a certificate.
-	// acmeClient.RequestCertificate(domain, privateKey)
-
+	// Placeholder for ACME client integration
 	return nil
 }

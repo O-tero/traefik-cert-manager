@@ -8,8 +8,9 @@ import (
 )
 
 type DomainConfig struct {
-	ServiceName string `json:"service_name"`
-	Domain      string `json:"domain"`
+	Domain         string `json:"domain"`
+	PrivateKeyPath string `json:"privateKeyPath"`
+	Email          string `json:"email"`
 }
 
 var (
