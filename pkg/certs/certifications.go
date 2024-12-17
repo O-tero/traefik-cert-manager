@@ -53,7 +53,6 @@ func LoadCertificates() (map[string]CertificateStatus, error) {
 
 // RequestCertificate requests a new certificate for a domain.
 func RequestCertificate(domain string) error {
-	// Initialize a Lego ACME client with required config
 	config := lego.NewConfig(&User{})
 	config.CADirURL = lego.LEDirectoryProduction
 	config.Certificate.KeyType = certcrypto.RSA2048
@@ -69,7 +68,6 @@ func RequestCertificate(domain string) error {
 		return fmt.Errorf("registration failed: %v", err)
 	}
 
-	// Request a certificate for the given domain
 	request := certificate.ObtainRequest{ 
 		Domains: []string{domain},
 		Bundle:  true,
@@ -79,7 +77,6 @@ func RequestCertificate(domain string) error {
 		return fmt.Errorf("certificate request failed for domain %s: %v", domain, err)
 	}
 
-	// Store certificates securely
 	return StoreCertificate(certificates, domain)
 }
 
@@ -116,7 +113,6 @@ func CheckAndRenewCertificates() {
 
 // StartCertificateManager starts the certificate manager with periodic renewal checks.
 func StartCertificateManager(cfg Config) {
-	// Scheduler for periodic renewal checks
 	ticker := time.NewTicker(24 * time.Hour)
 	go func() {
 		for range ticker.C {
@@ -138,7 +134,7 @@ func StartScheduler(interval time.Duration) {
 
 // CheckCertificatesStatus fetches the status of all stored certificates.
 func CheckCertificatesStatus() ([]CertificateStatus, error) {
-	certificates, err := ListCertificates() // Fetch certificates from storage
+	certificates, err := ListCertificates() 
 	if err != nil {
 		return nil, fmt.Errorf("failed to list certificates: %w", err)
 	}

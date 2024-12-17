@@ -1,0 +1,10 @@
+[
+    {
+        "service_name": "example-service",
+        "domain": "example.com"
+    },
+    {
+        "service_name": "expired-service",
+        "domain": "expired.com"
+    }
+]

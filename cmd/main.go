@@ -14,6 +14,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var domainConfigFile = "./config/domains.json" 
+
 func main() {
 	if len(os.Args) > 1 && os.Args[1] == "web" {
 		startWebInterface()
@@ -36,7 +38,6 @@ func startDefaultMode() {
 	go scheduleCustomDomainCheck()
 	startAPIServer()
 
-	// Prevent the application from exiting
 	select {}
 }
 
@@ -46,11 +47,9 @@ func startWebInterface() {
 	web.StartServer()
 }
 
-// CLI mode
 func cliMain() error {
 	log.Println("Starting CLI...")
 
-	// Root command
 	var rootCmd = &cobra.Command{
 		Use:   "cert-manager",
 		Short: "Certificate Manager CLI",
@@ -104,10 +103,7 @@ func cliMain() error {
 		},
 	}
 
-	// Add commands to root
 	rootCmd.AddCommand(requestCmd, checkCmd, notifyCmd)
-
-	// Execute the CLI
 	return rootCmd.Execute()
 }
 
