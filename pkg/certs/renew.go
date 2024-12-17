@@ -8,8 +8,6 @@ import (
 	"path/filepath"
 )
 
-// Define the storage path for certificates and keys
-const CertsStoragePath = "/path/to/certificates"
 
 // GetCertificate retrieves the certificate and private key for a given domain from secure storage.
 func GetCertificate(domain string) (string, string, error) {

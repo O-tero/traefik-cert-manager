@@ -15,6 +15,7 @@ import (
 	"github.com/go-acme/lego/v4/certificate"
 )
 
+var CertsStoragePath = "secure_certs" 
 
 type Certificate struct {
 	Certificate string `json:"certificate"`
@@ -27,7 +28,6 @@ type CertificatesFile struct {
 		KeyFile  string `json:"keyFile"`
 	} `json:"tls"`
 }
-
 
 func EncryptData(data []byte, key string) ([]byte, error) {
 	block, err := aes.NewCipher([]byte(key))
@@ -75,8 +75,6 @@ func DecryptData(ciphertext []byte, key string) ([]byte, error) {
 	return plainText, nil
 }
 
-
-
 func WriteCertificatesToFile(certPath, keyPath, outputFile string) error {
 	certs := CertificatesFile{
 		TLS: []struct {
@@ -116,15 +114,22 @@ func ListCertificates() ([]StoredCertificate, error) {
 			domain := file.Name()[:len(file.Name())-len(".crt")]
 			certPath := filepath.Join(CertsStoragePath, file.Name())
 			certData, err := os.ReadFile(certPath)
-			certData, err = ioutil.ReadFile(certPath)
 			if err != nil {
 				fmt.Printf("Failed to read certificate for domain %s: %v\n", domain, err)
 				continue
 			}
 
+			// Decrypt certificate if encrypted
+			// Replace with your decryption key management system
+			decryptedCert, err := DecryptData(certData, "secure-encryption-key")
+			if err != nil {
+				fmt.Printf("Failed to decrypt certificate for domain %s: %v\n", domain, err)
+				continue
+			}
+
 			certificates = append(certificates, StoredCertificate{
 				Domain: domain,
-				Cert:   certData,
+				Cert:   decryptedCert,
 			})
 		}
 	}
@@ -132,10 +137,9 @@ func ListCertificates() ([]StoredCertificate, error) {
 	return certificates, nil
 }
 
-
 func StoreCertificate(cert *certificate.Resource, domain string) error {
 	certDir := "certificates"
-	if err := os.MkdirAll(certDir, 0755); err != nil {
+	if err := os.MkdirAll(certDir, 0700); err != nil {
 		return fmt.Errorf("failed to create certificate directory: %v", err)
 	}
 
@@ -152,23 +156,40 @@ func StoreCertificate(cert *certificate.Resource, domain string) error {
 	return nil
 }
 
+// SaveCertificate securely saves the certificate and key for a domain.
 func SaveCertificate(domain string, cert []byte, key []byte) error {
-    certPath := "certificates/" + domain + ".crt"
-    keyPath := "certificates/" + domain + ".key"
+	// Ensure the certificate directory exists with secure permissions
+	if err := os.MkdirAll(CertsStoragePath, 0700); err != nil {
+		return fmt.Errorf("failed to create certificate storage path: %v", err)
+	}
 
-    // Save certificate
-    err := os.WriteFile(certPath, cert, 0600)
-    if err != nil {
-        return err
-    }
+	// Encrypt the certificate and key before storing them
+	encryptKey := "secure-encryption-key" // Use a secure key management system
+	encryptedCert, err := EncryptData(cert, encryptKey)
+	if err != nil {
+		return fmt.Errorf("failed to encrypt certificate: %v", err)
+	}
+	encryptedKey, err := EncryptData(key, encryptKey)
+	if err != nil {
+		return fmt.Errorf("failed to encrypt private key: %v", err)
+	}
 
-    // Save private key
-    err = os.WriteFile(keyPath, key, 0600)
-    if err != nil {
-        return err
-    }
+	certPath := filepath.Join(CertsStoragePath, domain+".crt")
+	keyPath := filepath.Join(CertsStoragePath, domain+".key")
 
-    log.Println("Certificate and key stored for domain:", domain)
-    return nil
+	// Check if the files already exist and handle overwrites
+	if _, err := os.Stat(certPath); err == nil {
+		return fmt.Errorf("certificate file already exists: %s", certPath)
+	}
+
+	// Write the encrypted certificate and key with secure permissions
+	if err := os.WriteFile(certPath, encryptedCert, 0600); err != nil {
+		return fmt.Errorf("failed to write certificate: %v", err)
+	}
+	if err := os.WriteFile(keyPath, encryptedKey, 0600); err != nil {
+		return fmt.Errorf("failed to write private key: %v", err)
+	}
+
+	log.Println("Certificate and key securely stored for domain:", domain)
+	return nil
 }
-
