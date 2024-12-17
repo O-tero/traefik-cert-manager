@@ -13,23 +13,20 @@ const CertsStoragePath = "/path/to/certificates"
 
 // GetCertificate retrieves the certificate and private key for a given domain from secure storage.
 func GetCertificate(domain string) (string, string, error) {
-	// Define file paths for certificate and key
-	certPath := filepath.Join(CertsStoragePath, fmt.Sprintf("%s.crt", domain))
-	keyPath := filepath.Join(CertsStoragePath, fmt.Sprintf("%s.key", domain))
+    certPath := filepath.Join(CertsStoragePath, fmt.Sprintf("%s.crt", domain))
+    keyPath := filepath.Join(CertsStoragePath, fmt.Sprintf("%s.key", domain))
 
-	// Read the certificate file
-	certData, err := ioutil.ReadFile(certPath)
-	if err != nil {
-		return "", "", fmt.Errorf("failed to read certificate for domain %s: %v", domain, err)
-	}
+    certData, err := ioutil.ReadFile(certPath)
+    if err != nil {
+        return "", "", fmt.Errorf("failed to read certificate for domain %s: %w", domain, err)
+    }
 
-	// Read the private key file
-	keyData, err := ioutil.ReadFile(keyPath)
-	if err != nil {
-		return "", "", fmt.Errorf("failed to read private key for domain %s: %v", domain, err)
-	}
+    keyData, err := ioutil.ReadFile(keyPath)
+    if err != nil {
+        return "", "", fmt.Errorf("failed to read private key for domain %s: %w", domain, err)
+    }
 
-	return string(certData), string(keyData), nil
+    return string(certData), string(keyData), nil
 }
 
 func RenewAndApplyCertificates(domains []string) {

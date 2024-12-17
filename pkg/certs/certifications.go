@@ -2,6 +2,8 @@ package certs
 
 import (
 	"crypto"
+	"crypto/rand"
+    "crypto/rsa"
 	"fmt"
 	"time"
 
@@ -44,6 +46,22 @@ type CertificateStatus struct {
 	Status string
 }
 
+func generateUserPrivateKey() (crypto.PrivateKey, error) {
+    return rsa.GenerateKey(rand.Reader, 2048)
+}
+
+func NewUser(email string) (*User, error) {
+	user := &User{
+		Email: email,
+	}
+	key, err := generateUserPrivateKey()
+	if err != nil {
+		return nil, fmt.Errorf("error generating private key: %v", err)
+	}
+	user.Key = key
+	return user, nil
+}
+
 func LoadCertificates() (map[string]CertificateStatus, error) {
 	return map[string]CertificateStatus{
 		"example.com": {Domain: "example.com", Expiry: "2024-12-31", Status: "Valid"},
@@ -53,32 +71,48 @@ func LoadCertificates() (map[string]CertificateStatus, error) {
 
 // RequestCertificate requests a new certificate for a domain.
 func RequestCertificate(domain string) error {
-	config := lego.NewConfig(&User{})
-	config.CADirURL = lego.LEDirectoryProduction
-	config.Certificate.KeyType = certcrypto.RSA2048
+    user := &User{
+        Email: "your-email@example.com",
+    }
 
-	client, err := lego.NewClient(config)
-	if err != nil {
-		return fmt.Errorf("failed to create ACME client: %v", err)
-	}
+    // Generate private key if not already set
+    if user.Key == nil {
+        key, err := rsa.GenerateKey(rand.Reader, 2048)
+        if err != nil {
+            return fmt.Errorf("failed to generate private key: %v", err)
+        }
+        user.Key = key
+    }
 
-	// Register with the ACME server
-	_, err = client.Registration.Register(registration.RegisterOptions{TermsOfServiceAgreed: true})
-	if err != nil {
-		return fmt.Errorf("registration failed: %v", err)
-	}
+    config := lego.NewConfig(user)
+    config.CADirURL = lego.LEDirectoryProduction
+    config.Certificate.KeyType = certcrypto.RSA2048
 
-	request := certificate.ObtainRequest{ 
-		Domains: []string{domain},
-		Bundle:  true,
-	}
-	certificates, err := client.Certificate.Obtain(request)
-	if err != nil {
-		return fmt.Errorf("certificate request failed for domain %s: %v", domain, err)
-	}
+    client, err := lego.NewClient(config)
+    if err != nil {
+        return fmt.Errorf("failed to create ACME client: %v", err)
+    }
 
-	return StoreCertificate(certificates, domain)
+    // Register user with ACME
+    _, err = client.Registration.Register(registration.RegisterOptions{
+        TermsOfServiceAgreed: true,
+    })
+    if err != nil {
+        return fmt.Errorf("registration failed: %v", err)
+    }
+
+    request := certificate.ObtainRequest{
+        Domains: []string{domain},
+        Bundle:  true,
+    }
+    cert, err := client.Certificate.Obtain(request)
+    if err != nil {
+        return fmt.Errorf("certificate request failed for domain %s: %v", domain, err)
+    }
+
+    return StoreCertificate(cert, domain)
 }
+
 
 
 // IsCertificateExpiring checks if a certificate is nearing expiration.

@@ -15,7 +15,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var domainConfigFile = "./config/domains.json"
 
 func main() {
 	if len(os.Args) > 1 && os.Args[1] == "web" {
