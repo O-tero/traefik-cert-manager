@@ -3,12 +3,16 @@ package certs
 import (
 	"crypto"
 	"crypto/rand"
-    "crypto/rsa"
+	"crypto/rsa"
 	"fmt"
+	"log"
+	"net/http"
 	"time"
 
-	"github.com/go-acme/lego/v4/certificate" 
+	"github.com/go-acme/lego/v4/certificate"
 	"github.com/go-acme/lego/v4/certcrypto"
+	"github.com/go-acme/lego/v4/challenge/http01"
+	"github.com/go-acme/lego/v4/challenge/tlsalpn01"
 	"github.com/go-acme/lego/v4/lego"
 	"github.com/go-acme/lego/v4/registration"
 )
@@ -47,7 +51,7 @@ type CertificateStatus struct {
 }
 
 func generateUserPrivateKey() (crypto.PrivateKey, error) {
-    return rsa.GenerateKey(rand.Reader, 2048)
+	return rsa.GenerateKey(rand.Reader, 2048)
 }
 
 func NewUser(email string) (*User, error) {
@@ -71,49 +75,64 @@ func LoadCertificates() (map[string]CertificateStatus, error) {
 
 // RequestCertificate requests a new certificate for a domain.
 func RequestCertificate(domain string) error {
-    user := &User{
-        Email: "your-email@example.com",
-    }
+	user := &User{
+		Email: "apg98042@msssg.com",
+	}
 
-    // Generate private key if not already set
-    if user.Key == nil {
-        key, err := rsa.GenerateKey(rand.Reader, 2048)
-        if err != nil {
-            return fmt.Errorf("failed to generate private key: %v", err)
-        }
-        user.Key = key
-    }
+	// Generate private key if not already set
+	if user.Key == nil {
+		key, err := rsa.GenerateKey(rand.Reader, 2048)
+		if err != nil {
+			return fmt.Errorf("failed to generate private key: %v", err)
+		}
+		user.Key = key
+	}
 
-    config := lego.NewConfig(user)
-    config.CADirURL = lego.LEDirectoryProduction
-    config.Certificate.KeyType = certcrypto.RSA2048
+	config := lego.NewConfig(user)
+	config.CADirURL = lego.LEDirectoryStaging // Staging environment
+	config.Certificate.KeyType = certcrypto.RSA2048
 
-    client, err := lego.NewClient(config)
-    if err != nil {
-        return fmt.Errorf("failed to create ACME client: %v", err)
-    }
+	client, err := lego.NewClient(config)
+	if err != nil {
+		return fmt.Errorf("failed to create ACME client: %v", err)
+	}
 
-    // Register user with ACME
-    _, err = client.Registration.Register(registration.RegisterOptions{
-        TermsOfServiceAgreed: true,
-    })
-    if err != nil {
-        return fmt.Errorf("registration failed: %v", err)
-    }
+	// Configure HTTP-01 solver
+	httpProvider := http01.NewProviderServer("", "80")
+	err = client.Challenge.SetHTTP01Provider(httpProvider)
+	if err != nil {
+		return fmt.Errorf("failed to set HTTP-01 provider: %v", err)
+	}
 
-    request := certificate.ObtainRequest{
-        Domains: []string{domain},
-        Bundle:  true,
-    }
-    cert, err := client.Certificate.Obtain(request)
-    if err != nil {
-        return fmt.Errorf("certificate request failed for domain %s: %v", domain, err)
-    }
+	// Configure TLS-ALPN-01 solver
+	tlsProvider, err := tlsalpn01.NewProviderServer("", "443")
+	if err != nil {
+		return fmt.Errorf("failed to create TLS-ALPN-01 provider: %v", err)
+	}
+	err = client.Challenge.SetTLSALPN01Provider(tlsProvider)
+	if err != nil {
+		return fmt.Errorf("failed to set TLS-ALPN-01 provider: %v", err)
+	}
 
-    return StoreCertificate(cert, domain)
+	// Register user with ACME
+	_, err = client.Registration.Register(registration.RegisterOptions{
+		TermsOfServiceAgreed: true,
+	})
+	if err != nil {
+		return fmt.Errorf("registration failed: %v", err)
+	}
+
+	request := certificate.ObtainRequest{
+		Domains: []string{domain},
+		Bundle:  true,
+	}
+	cert, err := client.Certificate.Obtain(request)
+	if err != nil {
+		return fmt.Errorf("certificate request failed for domain %s: %v", domain, err)
+	}
+
+	return StoreCertificate(cert, domain)
 }
-
-
 
 // IsCertificateExpiring checks if a certificate is nearing expiration.
 func IsCertificateExpiring(cert CertificateStatus) bool {
@@ -121,7 +140,7 @@ func IsCertificateExpiring(cert CertificateStatus) bool {
 	if err != nil {
 		return false
 	}
-	return time.Now().After(expiryDate.AddDate(0, 0, -30)) 
+	return time.Now().After(expiryDate.AddDate(0, 0, -30))
 }
 
 // CheckAndRenewCertificates checks for expiring certificates and renews them.
@@ -168,7 +187,7 @@ func StartScheduler(interval time.Duration) {
 
 // CheckCertificatesStatus fetches the status of all stored certificates.
 func CheckCertificatesStatus() ([]CertificateStatus, error) {
-	certificates, err := ListCertificates() 
+	certificates, err := ListCertificates()
 	if err != nil {
 		return nil, fmt.Errorf("failed to list certificates: %w", err)
 	}
