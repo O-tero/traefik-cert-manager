@@ -5,8 +5,6 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"fmt"
-	"log"
-	"net/http"
 	"time"
 
 	"github.com/go-acme/lego/v4/certificate"
@@ -105,10 +103,7 @@ func RequestCertificate(domain string) error {
 	}
 
 	// Configure TLS-ALPN-01 solver
-	tlsProvider, err := tlsalpn01.NewProviderServer("", "443")
-	if err != nil {
-		return fmt.Errorf("failed to create TLS-ALPN-01 provider: %v", err)
-	}
+	tlsProvider := tlsalpn01.NewProviderServer("", "443")
 	err = client.Challenge.SetTLSALPN01Provider(tlsProvider)
 	if err != nil {
 		return fmt.Errorf("failed to set TLS-ALPN-01 provider: %v", err)
