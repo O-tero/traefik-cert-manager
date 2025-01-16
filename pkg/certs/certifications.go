@@ -87,7 +87,7 @@ func RequestCertificate(domain string) error {
 	}
 
 	config := lego.NewConfig(user)
-	config.CADirURL = lego.LEDirectoryStaging // Staging environment
+	config.CADirURL = lego.LEDirectoryStaging 
 	config.Certificate.KeyType = certcrypto.RSA2048
 
 	client, err := lego.NewClient(config)

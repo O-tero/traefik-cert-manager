@@ -34,7 +34,6 @@ func main() {
 func startDefaultMode() {
 	log.Println("Starting Certificate Manager in default mode...")
 
-	// Load domain configurations
 	domainConfigs, err := config.LoadDomainConfigs()
 	if err != nil {
 		log.Fatalf("Error loading domain configurations: %v", err)
