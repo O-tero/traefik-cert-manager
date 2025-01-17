@@ -5,12 +5,16 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"fmt"
+	"log"
+	"net/http"
+	"net/http/httputil"
+	"net/url"
+	"strings"
 	"time"
 
-	"github.com/go-acme/lego/v4/certificate"
 	"github.com/go-acme/lego/v4/certcrypto"
+	"github.com/go-acme/lego/v4/certificate"
 	"github.com/go-acme/lego/v4/challenge/http01"
-	"github.com/go-acme/lego/v4/challenge/tlsalpn01"
 	"github.com/go-acme/lego/v4/lego"
 	"github.com/go-acme/lego/v4/registration"
 )
@@ -77,7 +81,6 @@ func RequestCertificate(domain string) error {
 		Email: "zzv70525@msssg.com",
 	}
 
-	// Generate private key if not already set
 	if user.Key == nil {
 		key, err := rsa.GenerateKey(rand.Reader, 2048)
 		if err != nil {
@@ -87,7 +90,7 @@ func RequestCertificate(domain string) error {
 	}
 
 	config := lego.NewConfig(user)
-	config.CADirURL = lego.LEDirectoryStaging 
+	config.CADirURL = lego.LEDirectoryStaging
 	config.Certificate.KeyType = certcrypto.RSA2048
 
 	client, err := lego.NewClient(config)
@@ -95,18 +98,11 @@ func RequestCertificate(domain string) error {
 		return fmt.Errorf("failed to create ACME client: %v", err)
 	}
 
-	// Configure HTTP-01 solver
-	httpProvider := http01.NewProviderServer("", "80")
+	// Configure only HTTP-01 solver
+	httpProvider := http01.NewProviderServer("", "8080") // Changed to use port 8080
 	err = client.Challenge.SetHTTP01Provider(httpProvider)
 	if err != nil {
 		return fmt.Errorf("failed to set HTTP-01 provider: %v", err)
-	}
-
-	// Configure TLS-ALPN-01 solver
-	tlsProvider := tlsalpn01.NewProviderServer("", "443")
-	err = client.Challenge.SetTLSALPN01Provider(tlsProvider)
-	if err != nil {
-		return fmt.Errorf("failed to set TLS-ALPN-01 provider: %v", err)
 	}
 
 	// Register user with ACME
@@ -121,6 +117,7 @@ func RequestCertificate(domain string) error {
 		Domains: []string{domain},
 		Bundle:  true,
 	}
+
 	cert, err := client.Certificate.Obtain(request)
 	if err != nil {
 		return fmt.Errorf("certificate request failed for domain %s: %v", domain, err)
@@ -129,44 +126,59 @@ func RequestCertificate(domain string) error {
 	return StoreCertificate(cert, domain)
 }
 
-// IsCertificateExpiring checks if a certificate is nearing expiration.
+// IsCertificateExpiring checks if a certificate is expiring within 30 days.
 func IsCertificateExpiring(cert CertificateStatus) bool {
 	expiryDate, err := time.Parse("2006-01-02", cert.Expiry)
 	if err != nil {
+		log.Printf("Failed to parse expiry date for domain %s: %v\n", cert.Domain, err)
 		return false
 	}
-	return time.Now().After(expiryDate.AddDate(0, 0, -30))
+	return time.Until(expiryDate) < 30*24*time.Hour
 }
 
-// CheckAndRenewCertificates checks for expiring certificates and renews them.
-func CheckAndRenewCertificates() {
+func CheckAndRenewCertificates() error {
 	certificates, err := LoadCertificates()
 	if err != nil {
-		fmt.Printf("Failed to load certificates: %v\n", err)
-		return
+		return fmt.Errorf("failed to load certificates: %v", err)
 	}
 
 	for domain, cert := range certificates {
 		if IsCertificateExpiring(cert) {
-			fmt.Printf("Renewing certificate for domain: %s\n", domain)
+			log.Printf("Renewing certificate for domain: %s\n", domain)
 			err := RequestCertificate(domain)
 			if err != nil {
-				fmt.Printf("Failed to renew certificate for %s: %v\n", domain, err)
+				log.Printf("Failed to renew certificate for %s: %v\n", domain, err)
 			} else {
-				fmt.Printf("Certificate renewed successfully for domain: %s\n", domain)
+				log.Printf("Certificate renewed successfully for domain: %s\n", domain)
 			}
 		}
 	}
+	return nil
 }
 
-// StartCertificateManager starts the certificate manager with periodic renewal checks.
-func StartCertificateManager(cfg Config) {
+// Modified StartCertificateManager to include proxy setup
+func StartCertificateManager(cfg Config) error {
+	// Set up the HTTP proxy first
+	if err := SetupHTTPProxy(); err != nil {
+		return fmt.Errorf("failed to set up HTTP proxy: %v", err)
+	}
+
+	// Do an initial check immediately
+	if err := CheckAndRenewCertificates(); err != nil {
+		log.Printf("Initial certificate check failed: %v\n", err)
+	}
+
+	// Start periodic checks
 	ticker := time.NewTicker(24 * time.Hour)
 	go func() {
 		for range ticker.C {
-			CheckAndRenewCertificates()
+			if err := CheckAndRenewCertificates(); err != nil {
+				log.Printf("Periodic certificate check failed: %v\n", err)
+			}
 		}
 	}()
+
+	return nil
 }
 
 // StartScheduler starts a scheduler with a custom interval.
@@ -180,7 +192,6 @@ func StartScheduler(interval time.Duration) {
 	}
 }
 
-// CheckCertificatesStatus fetches the status of all stored certificates.
 func CheckCertificatesStatus() ([]CertificateStatus, error) {
 	certificates, err := ListCertificates()
 	if err != nil {
@@ -213,4 +224,32 @@ func CheckCertificatesStatus() ([]CertificateStatus, error) {
 	}
 
 	return statuses, nil
+}
+
+// Add a new function to set up the HTTP proxy
+func SetupHTTPProxy() error {
+	// Create a reverse proxy to forward ACME challenges from port 80 to 8080
+	proxy := &http.Server{
+		Addr: ":80",
+		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if strings.HasPrefix(r.URL.Path, "/.well-known/acme-challenge/") {
+				proxy := httputil.NewSingleHostReverseProxy(&url.URL{
+					Scheme: "http",
+					Host:   "localhost:8080",
+				})
+				proxy.ServeHTTP(w, r)
+				return
+			}
+			http.Error(w, "Not found", http.StatusNotFound)
+		}),
+	}
+
+	// Start the proxy server
+	go func() {
+		if err := proxy.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			fmt.Printf("HTTP proxy server error: %v\n", err)
+		}
+	}()
+
+	return nil
 }
