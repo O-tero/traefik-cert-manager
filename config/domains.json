@@ -1,11 +1,11 @@
 [
     {
-        "domain": "example.com",
+        "domain": "my-test-domain1.duckdns.org",
         "privateKeyPath": "keys/example.com.key",
         "email": "admin@example.com"
     },
     {
-        "domain": "expired.com",
+        "domain": "my-test-domain2.duckdns.org",
         "privateKeyPath": "keys/expired.com.key",
         "email": "admin@expired.com"
     }

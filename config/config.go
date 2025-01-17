@@ -1,30 +1,29 @@
-// config/config.go
 package config
 
 import (
-    "log"
+    "encoding/json"
+    "fmt"
     "os"
-
-    "gopkg.in/yaml.v2"
 )
 
-type Config struct {
-    Domains       []string `yaml:"domains"`
-    NotifyEmail   string   `yaml:"notifyEmail"`
-    TraefikAPIURL string   `yaml:"traefikAPIUrl"`
+type DomainConfig struct {
+    Domain      string `json:"Domain"`
+    NotifyEmail string `json:"NotifyEmail"`
 }
 
-func LoadConfig(filePath string) Config {
-    file, err := os.ReadFile(filePath)
-    if err != nil {
-        log.Fatalf("Failed to load config file: %v", err)
+func LoadDomainConfigs() ([]DomainConfig, error) {
+        filePath := "config/domains.json"
+        data, err := os.ReadFile(filePath)
+        if err != nil {
+            return nil, fmt.Errorf("failed to open domain config file: %v", err)
+        }
+    
+        var domainConfigs []DomainConfig
+        err = json.Unmarshal(data, &domainConfigs)
+        if err != nil {
+            return nil, fmt.Errorf("failed to parse domain config file: %v", err)
+        }
+    
+        return domainConfigs, nil
     }
-
-    var cfg Config
-    err = yaml.Unmarshal(file, &cfg)
-    if err != nil {
-        log.Fatalf("Failed to parse config file: %v", err)
-    }
-
-    return cfg
-}
+    

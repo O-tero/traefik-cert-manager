@@ -66,15 +66,15 @@ func NewUser(email string) (*User, error) {
 
 func LoadCertificates() (map[string]CertificateStatus, error) {
 	return map[string]CertificateStatus{
-		"example.com": {Domain: "example.com", Expiry: "2024-12-31", Status: "Valid"},
-		"expired.com": {Domain: "expired.com", Expiry: "2023-01-01", Status: "Expired"},
+		"my-test-domain1.duckdns.org": {Domain: "my-test-domain1.duckdns.org", Expiry: "2024-12-31", Status: "Valid"},
+		"my-test-domain2.duckdns.org": {Domain: "my-test-domain2.duckdns.org", Expiry: "2023-01-01", Status: "Expired"},
 	}, nil
 }
 
 // RequestCertificate requests a new certificate for a domain.
 func RequestCertificate(domain string) error {
 	user := &User{
-		Email: "apg98042@msssg.com",
+		Email: "zzv70525@msssg.com",
 	}
 
 	// Generate private key if not already set

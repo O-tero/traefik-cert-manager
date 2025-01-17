@@ -36,8 +36,9 @@ func startDefaultMode() {
 
 	domainConfigs, err := config.LoadDomainConfigs()
 	if err != nil {
-		log.Fatalf("Error loading domain configurations: %v", err)
+    	log.Fatalf("Error loading domain configurations: %v", err)
 	}
+
 
 	// Renew certificates for loaded domains
 	for _, domainConfig := range domainConfigs {
