@@ -143,14 +143,15 @@ func scheduleCustomDomainCheck() {
 
 // API server for domain configuration and notifications
 func startAPIServer() {
-	go func() {
-		http.HandleFunc("/update-domains", api.UpdateDomainConfigsHandler)
-		http.HandleFunc("/notify-expirations", api.NotifyExpirationsHandler)
+    go func() {
+        mux := http.NewServeMux()
+        mux.HandleFunc("/update-domains", api.UpdateDomainConfigsHandler)
+        mux.HandleFunc("/notify-expirations", api.NotifyExpirationsHandler)
 
-		serverAddress := ":8080"
-		log.Printf("Starting API server on %s...\n", serverAddress)
-		if err := http.ListenAndServe(serverAddress, nil); err != nil {
-			log.Fatalf("Failed to start API server: %v", err)
-		}
-	}()
+        serverAddress := ":9090" // Changed from 8080 to 9090 for API server
+        log.Printf("Starting API server on %s...\n", serverAddress)
+        if err := http.ListenAndServe(serverAddress, mux); err != nil {
+            log.Fatalf("Failed to start API server: %v", err)
+        }
+    }()
 }

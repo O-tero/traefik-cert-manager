@@ -6,10 +6,12 @@ import (
 	"crypto/rsa"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/go-acme/lego/v4/certcrypto"
@@ -17,6 +19,14 @@ import (
 	"github.com/go-acme/lego/v4/challenge/http01"
 	"github.com/go-acme/lego/v4/lego"
 	"github.com/go-acme/lego/v4/registration"
+)
+
+// Global variables to track server instances
+var (
+	challengeServer      *http.Server
+	proxyServer          *http.Server
+	serverMutex          sync.Mutex
+	defaultChallengePort int
 )
 
 // User represents an ACME user.
@@ -52,6 +62,26 @@ type CertificateStatus struct {
 	Status string
 }
 
+// checkPortAvailable checks if a port is available
+func checkPortAvailable(port string) bool {
+	ln, err := net.Listen("tcp", ":"+port)
+	if err != nil {
+		return false
+	}
+	ln.Close()
+	return true
+}
+
+// findAvailablePort finds the next available port starting from the given port
+func findAvailablePort(startPort int) (int, error) {
+	for port := startPort; port < startPort+100; port++ {
+		if checkPortAvailable(fmt.Sprintf("%d", port)) {
+			return port, nil
+		}
+	}
+	return 0, fmt.Errorf("no available ports found in range %d-%d", startPort, startPort+100)
+}
+
 func generateUserPrivateKey() (crypto.PrivateKey, error) {
 	return rsa.GenerateKey(rand.Reader, 2048)
 }
@@ -73,6 +103,84 @@ func LoadCertificates() (map[string]CertificateStatus, error) {
 		"my-test-domain1.duckdns.org": {Domain: "my-test-domain1.duckdns.org", Expiry: "2024-12-31", Status: "Valid"},
 		"my-test-domain2.duckdns.org": {Domain: "my-test-domain2.duckdns.org", Expiry: "2023-01-01", Status: "Expired"},
 	}, nil
+}
+
+// SetupHTTPProxy creates a proxy server to handle ACME HTTP-01 challenges
+func SetupHTTPProxy() error {
+	serverMutex.Lock()
+	defer serverMutex.Unlock()
+
+	// Clean up any existing servers
+	if proxyServer != nil {
+		proxyServer.Close()
+	}
+	if challengeServer != nil {
+		challengeServer.Close()
+	}
+
+	// Find available ports
+	challengePort, err := findAvailablePort(8090)
+	if err != nil {
+		return fmt.Errorf("failed to find available challenge port: %v", err)
+	}
+
+	// Setup challenge server first
+	challengeServer = &http.Server{
+		Addr: fmt.Sprintf(":%d", challengePort),
+		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if strings.HasPrefix(r.URL.Path, "/.well-known/acme-challenge/") {
+				// Handle ACME challenge
+				http.DefaultServeMux.ServeHTTP(w, r)
+			} else {
+				http.Error(w, "Not found", http.StatusNotFound)
+			}
+		}),
+	}
+
+	// Start challenge server
+	go func() {
+		if err := challengeServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Printf("Challenge server error: %v\n", err)
+		}
+	}()
+
+	// Try to set up proxy on port 80, but fall back to high port if needed
+	proxyPort := 80
+	if !checkPortAvailable("80") {
+		var err error
+		proxyPort, err = findAvailablePort(8080)
+		if err != nil {
+			return fmt.Errorf("failed to find available proxy port: %v", err)
+		}
+		log.Printf("Warning: Port 80 not available, using port %d instead. Certificate validation may fail.", proxyPort)
+	}
+
+	proxyServer = &http.Server{
+		Addr: fmt.Sprintf(":%d", proxyPort),
+		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if strings.HasPrefix(r.URL.Path, "/.well-known/acme-challenge/") {
+				proxy := httputil.NewSingleHostReverseProxy(&url.URL{
+					Scheme: "http",
+					Host:   fmt.Sprintf("localhost:%d", challengePort),
+				})
+				proxy.ServeHTTP(w, r)
+				return
+			}
+			http.Error(w, "Not found", http.StatusNotFound)
+		}),
+	}
+
+	go func() {
+		if err := proxyServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Printf("Proxy server error: %v\n", err)
+		}
+	}()
+
+	// Update the defaultChallengePort
+	defaultChallengePort = challengePort
+
+	log.Printf("Challenge server running on port %d, proxy server on port %d", challengePort, proxyPort)
+	return nil
 }
 
 // RequestCertificate requests a new certificate for a domain.
@@ -98,14 +206,14 @@ func RequestCertificate(domain string) error {
 		return fmt.Errorf("failed to create ACME client: %v", err)
 	}
 
-	// Configure only HTTP-01 solver
-	httpProvider := http01.NewProviderServer("", "8080") // Changed to use port 8080
+	// Use the discovered challenge port
+	httpProvider := http01.NewProviderServer("", fmt.Sprintf("%d", defaultChallengePort))
 	err = client.Challenge.SetHTTP01Provider(httpProvider)
 	if err != nil {
 		return fmt.Errorf("failed to set HTTP-01 provider: %v", err)
 	}
 
-	// Register user with ACME
+	// Register if not already registered
 	_, err = client.Registration.Register(registration.RegisterOptions{
 		TermsOfServiceAgreed: true,
 	})
@@ -156,7 +264,6 @@ func CheckAndRenewCertificates() error {
 	return nil
 }
 
-// Modified StartCertificateManager to include proxy setup
 func StartCertificateManager(cfg Config) error {
 	// Set up the HTTP proxy first
 	if err := SetupHTTPProxy(); err != nil {
@@ -199,7 +306,6 @@ func CheckCertificatesStatus() ([]CertificateStatus, error) {
 	}
 
 	var statuses []CertificateStatus
-
 	for _, cert := range certificates {
 		expiryDate, err := GetCertificateExpiry(cert.Cert)
 		if err != nil {
@@ -226,30 +332,17 @@ func CheckCertificatesStatus() ([]CertificateStatus, error) {
 	return statuses, nil
 }
 
-// Add a new function to set up the HTTP proxy
-func SetupHTTPProxy() error {
-	// Create a reverse proxy to forward ACME challenges from port 80 to 8080
-	proxy := &http.Server{
-		Addr: ":80",
-		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if strings.HasPrefix(r.URL.Path, "/.well-known/acme-challenge/") {
-				proxy := httputil.NewSingleHostReverseProxy(&url.URL{
-					Scheme: "http",
-					Host:   "localhost:8080",
-				})
-				proxy.ServeHTTP(w, r)
-				return
-			}
-			http.Error(w, "Not found", http.StatusNotFound)
-		}),
+// CleanupServers cleans up the HTTP servers
+func CleanupServers() {
+	serverMutex.Lock()
+	defer serverMutex.Unlock()
+
+	if proxyServer != nil {
+		proxyServer.Close()
+		proxyServer = nil
 	}
-
-	// Start the proxy server
-	go func() {
-		if err := proxy.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			fmt.Printf("HTTP proxy server error: %v\n", err)
-		}
-	}()
-
-	return nil
+	if challengeServer != nil {
+		challengeServer.Close()
+		challengeServer = nil
+	}
 }
