@@ -1,0 +1,33 @@
+# Traefik Certificate Manager Configuration
+traefik_api: "http://traefik:8080/api"
+email: "alerts@example.com"
+
+# Notification settings
+notification:
+  smtp_host: "smtp.example.com"
+  smtp_port: 587
+  username: ""
+  password: ""
+  from: "noreply@example.com"
+  
+domains:
+  - service: "service1"
+    domain: "example.com"
+    aliases: []
+  - service: "api-service"
+    domain: "api.example.com"
+    aliases: ["api-staging.example.com"]
+
+acme:
+  ca_dir_url: "https://acme-v02.api.letsencrypt.org/directory"
+  key_type: "RSA2048"
+  email: "alerts@example.com"
+  
+certificates:
+  renewal_days: 30  # Renew when less than 30 days remaining
+  storage_path: "./certs"
+  
+app:
+  log_level: "info"
+  check_interval: "24h"
+  timeout: "30s"
