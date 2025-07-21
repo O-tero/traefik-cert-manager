@@ -37,3 +37,61 @@
                 │ • Validates domain ownership        │
                 │ • Provides ACME endpoints           │
                 └─────────────────────────────────────┘
+
+
+          ┌─────────────────────────────────────────────────────────────────────────┐
+          │                             SYSTEM OVERVIEW                             │
+          └─────────────────────────────────────────────────────────────────────────┘
+
+                             ┌──────────────────────────────────┐
+                             │          Scheduler               │
+                             │  (scheduler.go)                 │
+                             │----------------------------------│
+                             │ • Ticker triggers periodic run  │
+                             │ • Context for stop/timeout      │
+                             │ • Tracks stats & logs           │
+                             └───────────────┬─────────────────┘
+                                             │
+                       ┌─────────────────────▼─────────────────────┐
+                       │          RenewalService                  │
+                       │-------------------------------------------│
+                       │ • Called by Scheduler on each tick       │
+                       │ • Or manual RunOnce() call               │
+                       │ • Delegates actual renewal logic         │
+                       └───────────────────┬──────────────────────┘
+                                           │
+                      ┌────────────────────▼──────────────────────┐
+                      │        CertificateManager                 │
+                      │-------------------------------------------│
+                      │ • CheckCertificateHealth()               │
+                      │    - Scans certs for expiry              │
+                      │ • RenewCertificate(domain)               │
+                      │    - Uses ACME client (lego)             │
+                      │    - Saves new .crt & .key               │
+                      │ • Updates dynamic Traefik config         │
+                      └───────────────────┬──────────────────────┘
+                                          │
+           ┌──────────────────────────────▼─────────────────────────────┐
+           │                      ACME (lego client)                    │
+           │------------------------------------------------------------│
+           │ • Registers ACME account (email, key)                     │
+           │ • Handles challenges (HTTP-01 via Traefik or DNS-01)      │
+           │ • Contacts Let's Encrypt (CA) for cert issuance/renewal   │
+           └──────────────────────────────┬─────────────────────────────┘
+                                          │
+                     ┌────────────────────▼─────────────────────┐
+                     │          Let's Encrypt (CA)             │
+                     │------------------------------------------│
+                     │ • Validates domain ownership            │
+                     │ • Issues new certificates               │
+                     │ • Enforces rate limits                  │
+                     └──────────────────────────────────────────┘
+
+                                ┌─────────────────────────────────┐
+                                │           Traefik              │
+                                │--------------------------------│
+                                │ • Serves HTTP/HTTPS traffic   │
+                                │ • Uses dynamic config file     │
+                                │   updated by CertificateManager│
+                                │ • Reloads certs automatically │
+                                └─────────────────────────────────┘
